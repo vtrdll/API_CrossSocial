@@ -56,6 +56,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware", 
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -65,6 +66,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+]
 # TEMPLATES
 
 ROOT_URLCONF = 'app.urls'
@@ -106,7 +111,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-
+    "corsheaders",
     'django_celery_beat',
 
     # seus apps
@@ -115,10 +120,15 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'Event',
     'WOD',
+    'Team',
 ]
 
 
-
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+}
 # CELERY
 
 CELERY_BROKER_URL = 'redis://redis:6379/0'
@@ -150,4 +160,4 @@ AUTH_PASSWORD_VALIDATORS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/app/media/'
+MEDIA_URL = '/media/'

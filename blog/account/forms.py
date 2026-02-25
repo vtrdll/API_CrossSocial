@@ -1,5 +1,5 @@
 from django import forms
-from .models import Profile, ProfilePersonalRecord, Times, Box
+from .models import Profile, ProfilePersonalRecord, Box
 import datetime
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -163,11 +163,3 @@ class PrivacyConfigForm(forms.ModelForm):
 
 
     
-
-class TimeForm(forms.ModelForm):
-
-    
-
-    class Meta():
-        model = Times
-        fields = ['name', 'description', 'box', 'category']

@@ -1,69 +1,50 @@
-from django.shortcuts import render, redirect,  HttpResponse
 
+from rest_framework.response import Response
 from .form import WodForm
 from  .models import WOD
-
+from .serializers import WodSerializer
+from rest_framework import status
+from rest_framework.generics import RetrieveAPIView, ListAPIView
 from django.http import HttpResponseNotAllowed
 from django.urls import reverse_lazy
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
+from rest_framework.views import APIView
 # Create your views here.
 
 
 
 
+class CreateWodAPIVIEW(APIView):
+   
 
-'''
-
-
-def create_wod (request):
-    coach = request.user.profile
-
-    if request.method == 'POST':
-        formset =  WoodInlineFormSet (request.POST, instance= coach)
-        if formset.is_valid():
-            formset.save()
-
-            return redirect('home')
-            
-        else:
-            formset  =WoodInlineFormSet(instance= coach)
-            HttpResponse(formset)
-
-    else:
-        formset = WoodInlineFormSet
+    def post(self, request):
+        serializer = WodSerializer(data=request.data, context={'request': request})
         
+        if serializer.is_valid():
+            # Salva o WOD com o coach sendo o usuário logado
+            serializer.save(coach=request.user.profile.is_coach)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ListWodAPIView(ListAPIView):
+    queryset = WOD.objects.all()
+    serializer_class = WodSerializer
     
-    return render(request, 'wod_create.html', {'formset':formset  })''''''
-'''
-def create_wod(request):
-    if request.method == "POST" and request.user.profile.is_coach:
-        form = WodForm(request.POST)
-        if form.is_valid():
-            wod = form.save(commit=False)
-            wod.coach = request.user.profile  # pega o perfil do usuário logado
-            wod.save()
-            return redirect(reverse_lazy("home"))
-    else:
-        form = WodForm()
+class LikeCommentViewAPI(APIView):
+  
+    def post(self, request, pk):
+        wod = get_object_or_404(WOD, pk=pk)
+        user = request.user
+        if user in wod.like.all():
+            wod.like.remove(user)
+            liked= False
+        else:
+            wod.like.add(user)
+            liked= True
 
-    return render(request, "create_wod.html", {"form": form})
-
+        return Response({"liked": liked})
 
 
 
 
-def like_wod (request, pk):
-    
-    if request.method != 'POST':
-        return  HttpResponseNotAllowed(['POST'])
-    
-    user =  request.user
-    wod = get_object_or_404  (WOD,pk=pk)
-
-    if user in wod.like.all():
-        wod.like.remove(user)
-    else:
-        wod.like.add(user)
-    
-
-    return redirect (reverse_lazy('home'))

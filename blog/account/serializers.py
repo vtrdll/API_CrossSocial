@@ -1,9 +1,7 @@
 from rest_framework import serializers
 import datetime
-from account.models import User,  Profile, Box, Times
+from account.models import User,  Profile, Box, ProfilePersonalRecord
 from django.core.validators import MaxValueValidator, MinValueValidator
-
-
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -26,8 +24,6 @@ class CreateUserSerializer(serializers.ModelSerializer):
         return email
     
 
-    
-    
 class CreateProfileSerializer(serializers.ModelSerializer):
 
     birthday = data = serializers.DateField(
@@ -59,9 +55,8 @@ class CreateProfileSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
         return user
-    
-
-    
+ 
+ 
 class UserUpdateSerializer(serializers.ModelSerializer):
     box = serializers.PrimaryKeyRelatedField(
         queryset=Box.objects.all(),
@@ -132,6 +127,12 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
+class UserUpdatePhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['photo']
+
+
 class UserUpdatePasswordSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -145,7 +146,26 @@ class UserUpdatePasswordSerializer(serializers.ModelSerializer):
         instance.set_password(password)
         instance.save()
         return instance
-    
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta: 
+        model = User
+        fields = '__all__'
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = '__all__'
+
+    def get_photo(self, obj):
+        request = self.context.get("request")
+        if obj.photo:
+            return request.build_absolute_uri(obj.photo.url)
+        return None
+
+
 class PrivacySerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -154,9 +174,34 @@ class PrivacySerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]  #impede  que a  view  valide o id. Ele não será atualizado, apenas retornado.
 
     
-class CreateTeamSerializer(serializers.ModelSerializer):
+
+
+class PersonalRecordSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = Times
-        fields = ['name','description', 'box','category', 'membros' ]
-        read_only_fields = ["creator"]
+        model = ProfilePersonalRecord
+        fields = ['moviment','date','personal_record',]
+        read_only_fields = ["athlete"]
+
+
+class UserNestedSerializer(serializers.ModelSerializer):
+    photo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Profile
+        fields = ["photo","box"]
+
+    def get_photo(self, obj):
+        request = self.context.get("request")
+        if obj.photo:
+            return request.build_absolute_uri(obj.photo.url)
+        return None
+
+
+class UserSerializer(serializers.ModelSerializer):
+
+    profile = UserNestedSerializer(read_only=True) 
+    class Meta:
+        model = User
+        fields = ["id", "profile", "username", "email", "first_name", "last_name" ]
+

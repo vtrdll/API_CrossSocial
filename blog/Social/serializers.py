@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Post, PostImage, PostVideo,Story, StoryImage, StoryVideo, Comment
 from account.models import User
-
+from account.serializers import UserSerializer
 
 
 class MyUserSerializer(serializers.ModelSerializer):
@@ -46,8 +46,11 @@ class PostSerializer(serializers.ModelSerializer):
         ]
 
     def get_author_photo(self, obj):
+        request = self.context.get("request")
+
         if obj.author.profile.photo:
-            return obj.author.profile.photo.url
+            return request.build_absolute_uri(obj.author.profile.photo.url)
+
         return None
 
     def get_imagens(self, obj):
@@ -117,19 +120,20 @@ class StoryImageSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = StoryImage
-        fields = ['story_image']
+        fields = ['id','story_image']
 
 class StoryVideoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StoryVideo
-        fields = ['story_video']
+        fields = ['id','story_video']
 
 
-
+   
 
 
 class StorySerializer(serializers.ModelSerializer):
+    
 
     imagens = StoryImageSerializer(
         source='story_images', many=True, required=False
@@ -144,9 +148,9 @@ class StorySerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context.get('request')
-        media_files = request.FILES.getlist('media')  # pega todos os arquivos do input
+        media_files = request.FILES.getlist('media')
 
-        story = Story.objects.create(user=request.user, **validated_data)
+        story = Story.objects.create(user=request.user)
 
         for f in media_files:
             if f.content_type.startswith('image'):
@@ -155,12 +159,33 @@ class StorySerializer(serializers.ModelSerializer):
                 StoryVideo.objects.create(post=story, story_video=f)
 
         return story
-        
     
+
+
+
+        
+class StorySerializerList(serializers.ModelSerializer):
+    story_images = StoryImageSerializer(many=True, read_only=True)
+    story_videos = StoryVideoSerializer(many=True, read_only=True)
+    user = UserSerializer(read_only=True)
+    class Meta:
+        model = Story
+        fields = [
+            "id",
+            "user",
+            "created_at",
+            "expires_at",
+            "story_images",
+            "story_videos",
+        ]
+
+
+
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = [  'comment']
+
 
 
 

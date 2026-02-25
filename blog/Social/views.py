@@ -6,14 +6,14 @@ from WOD.models import  WOD
 
 from django.urls import reverse
 from account.models import User
-
+from account.serializers import UserSerializer
 from .models import Post, Comment
 from django.shortcuts import redirect
 from rest_framework.views import APIView
-from rest_framework.generics import RetrieveUpdateDestroyAPIView, RetrieveAPIView,  DestroyAPIView
+from rest_framework.generics import RetrieveUpdateDestroyAPIView, RetrieveAPIView,  DestroyAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
-from Social.serializers import PostSerializer, StorySerializer, CommentSerializer, PostCreateSerializer
+from Social.serializers import PostSerializer, StorySerializer, CommentSerializer, PostCreateSerializer, StorySerializerList
 from django.utils import timezone
 from .models import PostCommentInventory, Story
 
@@ -55,7 +55,12 @@ class PostCreateViewAPI(APIView):
             {"detail": "Post created successfully."},
             status=status.HTTP_201_CREATED
         )
-    
+ 
+
+class PostListViewAPI(ListAPIView):
+    queryset = Post.objects.all()
+    serializer_class  = PostSerializer
+
 
 class PostDeteailViewAPI(RetrieveAPIView):  
     queryset = Post.objects.prefetch_related("images", "videos")
@@ -63,9 +68,6 @@ class PostDeteailViewAPI(RetrieveAPIView):
     serializer_class = PostSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
-class PostDetailViewAPITemplate(TemplateView):
-    template_name = 'post-detail.html'
-    
 
 class  PostUpdateDeleteViewAPI(RetrieveUpdateDestroyAPIView):
     queryset = Post.objects.all()
@@ -113,9 +115,8 @@ class HomeAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-
-
+   
+  
 class StoryCreateViewAPI(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
@@ -133,8 +134,22 @@ class StoryCreateViewAPI(APIView):
             {"detail": "Story created successfully."},
             status=status.HTTP_201_CREATED
         )
-    
+ 
 
+class StoryListViewAPI(ListAPIView):
+
+    #permission_classes = [IsAuthenticated]
+    serializer_class = StorySerializerList
+    def get_queryset(self):
+        return (
+            Story.objects
+            .select_related("user__profile")  # otimiza user + profile
+            .prefetch_related("story_images", "story_videos")  # otimiza mídias
+            .order_by("-created_at")
+        )
+
+    def get_serializer_context(self):
+        return {"request": self.request}
 
 class StoryViewAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -152,7 +167,8 @@ class StoryViewAPIView(APIView):
             story, context={"request": request}
         )
         return Response(serializer.data)
-    
+
+
 class StoryDeleteViewAPI(DestroyAPIView):
     queryset = Story.objects.all()
     serializer_class = StorySerializer
@@ -166,7 +182,7 @@ class StoryDeleteViewAPI(DestroyAPIView):
                 status=status.HTTP_403_FORBIDDEN
             )
         return super().delete(request, *args, **kwargs)
-    
+
 
 class CommentCreateViewAPI(APIView):
     permission_classes = [IsAuthenticated]
@@ -185,7 +201,7 @@ class CommentCreateViewAPI(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    
+
 class CommentListUserView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
@@ -196,8 +212,8 @@ class CommentListUserView(APIView):
             comments, many=True, context={'request': request}
         )
         return Response(serializer.data)
-    
-    
+
+
 class CommentListUserDeleteOrUpdateViewAPI(RetrieveUpdateDestroyAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
@@ -238,7 +254,7 @@ class LikePostViewAPI(APIView):
             liked = True
 
         return Response({"liked": liked})
-    
+
 
 class LikeCommentViewAPI(APIView):
     permission_classes = [IsAuthenticated]
@@ -254,8 +270,6 @@ class LikeCommentViewAPI(APIView):
             liked = True
 
         return Response({"liked": liked})
-
-
 
 
 class PostCreateViewAPITemplate(TemplateView):
@@ -289,7 +303,6 @@ def my_profile(request):
     return render(request, 'my_perfil.html', {'user': request.user, 'posts': posts, 'comments':comments, 'inventory_post': inventory_post, 'mostrar_inventory':True, 'pr':pr})
 
 
-
 class MyProfileAPI(APIView):
     
     def get(self, request):
@@ -297,7 +310,7 @@ class MyProfileAPI(APIView):
         posts = user.post_set.all().order_by('-created_at')
         comments = user.comment_set.all().order_by('-created_at')
         pr = user.profilepersonalrecord_set.all()
-        
+        serialized_user = UserSerializer(user, context={'request': request}).data
         for post in posts:
             imagens = [img.photo.url for img in post.images.all() if img.photo]
             videos = [vid.video.url for vid in post.videos.all() if vid.video]
@@ -308,10 +321,11 @@ class MyProfileAPI(APIView):
 
         inventory_post = PostCommentInventory.objects.filter(author=user).first()
         data = {
-            
+            "user": serialized_user,
             'posts': PostSerializer(posts, many=True, context={'request': request}).data,
             'comments': CommentSerializer(comments, many=True, context={'request': request}).data,
             'inventory_post_id': inventory_post.id if inventory_post else None,
             'pr': pr.values()  # ou use um serializer específico para PR
         }
         return Response(data)
+    

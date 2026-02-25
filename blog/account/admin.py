@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Profile, Box, Times, Time_Achievements
+from .models import Profile, Box
 # Register your models here.
 
 
@@ -20,20 +20,3 @@ class BoxAdmin(admin.ModelAdmin):
     search_fields = ('box_name', 'author')
 
 admin.site.register(Box)
-
-
-class TimeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'creator', 'box', 'category', 'placement', 'achievements')
-    list_filter = ('name',)
-    search_fields = ('name' , 'creator')
-
-
-admin.site.register(Times)
-
-
-class Time_AchievementsAdmin(admin.ModelAdmin):
-    list_display = ('time', 'achievement', 'placement')
-    list_filter = ('time',)
-    search_fields = ('time__name' , 'achievement')
-
-admin.site.register(Time_Achievements)

@@ -1,15 +1,8 @@
 from django.db import models
-
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
 # Create your models here.
-
-
-
-
-
-
 
 
 class  Box(models.Model):
@@ -18,6 +11,7 @@ class  Box(models.Model):
 
     def __str__(self):
         return f'Box {self.box_name} -'
+
 
 class Profile (models.Model):
     
@@ -47,7 +41,6 @@ class Profile (models.Model):
         return f'Perfil de {self.user.username}'
     
 
-
 class ProfilePersonalRecord(models.Model):
     
     athlete =  models.ForeignKey(User, on_delete=models.CASCADE)
@@ -57,44 +50,7 @@ class ProfilePersonalRecord(models.Model):
     personal_record = models.DecimalField (max_digits=5, decimal_places=1, validators=[MaxValueValidator(500),  MinValueValidator(5)], default=0)
     
     
-    
 
     def  __str__(self):
         return f'Personal Record de {self.athlete} - movimento -{self.moviment} -   {self.personal_record} kg'
     
-
-class Times(models.Model):
-    creator = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Criador do Time', related_name= 'times_criados')
-    name = models.CharField(max_length=50, verbose_name= 'Time_name', blank=False,  null= False, )
-    description = models.CharField(max_length=500, verbose_name="Descrição")
-    box = models.ForeignKey(Box, on_delete=models.CASCADE, default = 'DEFAULT')
-    category = models.CharField(choices= Profile.CATEGORY_CHOICES, default= 'EXPERIMENTAL', verbose_name="Categoria do Time")
-    membros = models.ManyToManyField(User, related_name='times_membros', verbose_name='Membros')
-
-    ['creator','name','description', 'box','category', 'membros' ]
- 
-    
-
-
-
-    def __str__(self):
-        return f'Nome {self.name} - Criador {self.creator} '
-    
-
-    def adicionar_membro(self, usuario):
-        if usuario not in self.membros.all():
-            self.membros.add(usuario)
-
-    def remover_membro(self, usuario):
-        if usuario in self.membros.all():
-            self.membros.remove(usuario)
-
-
-class Time_Achievements(models.Model):
-    time = models.ForeignKey(Times, on_delete=models.CASCADE, verbose_name='Time_Conquista')
-    achievement = models.CharField(max_length=200, verbose_name='Conquista')
-    placement= models.IntegerField(default=0, verbose_name="Colocação em Competições", validators=[MinValueValidator(0)])
-
-
-    def __str__(self):
-        return f'Conquista: {self.achievement} do Time: {self.time.name}'
